@@ -18,7 +18,7 @@ def upload_to_s3(file_path, bucket, key):
 def handler(job):
     input_data = job["input"]
     prompt = input_data.get("prompt", "")
-    negative_prompt = input_data.get("negative_prompt", "")
+    negative_prompt = input_data.get("negative_prompt", "worst quality, inconsistent motion, blurry, jittery, distorted")
     num_frames = input_data.get("num_frames", 121)
     width = input_data.get("width", 832)
     height = input_data.get("height", 480)
@@ -31,14 +31,14 @@ def handler(job):
         dtype = torch.bfloat16
         model_id = "Lightricks/LTX-Video"
 
-        print(f"Loading model from {model_id}...")
-        pipe = LTXPipeline.from_pretrained(model_id, torch_dtype=dtype)
+        print("Loading model from cache...")
+        pipe = LTXPipeline.from_pretrained(model_id, torch_dtype=dtype, local_files_only=True)
         pipe.to("cuda")
         print("Model loaded!")
 
         output = pipe(
             prompt=prompt,
-            negative_prompt=negative_prompt if negative_prompt else "worst quality, inconsistent motion, blurry, jittery, distorted",
+            negative_prompt=negative_prompt,
             height=height,
             width=width,
             num_frames=num_frames,

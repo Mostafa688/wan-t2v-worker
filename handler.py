@@ -3,28 +3,7 @@ import torch
 import os
 import uuid
 import boto3
-from diffusers import AutoencoderKLWan, WanPipeline
-from diffusers.utils import export_to_video
-from transformers import UMT5EncoderModel
-
-print("Loading WAN 2.1 T2V model...")
-
-dtype = torch.bfloat16
-model_id = "Wan-AI/Wan2.1-T2V-14B-Diffusers"
-
-text_encoder = UMT5EncoderModel.from_pretrained(
-    model_id, subfolder="text_encoder", torch_dtype=dtype
-)
-vae = AutoencoderKLWan.from_pretrained(
-    model_id, subfolder="vae", torch_dtype=torch.float32
-)
-pipe = WanPipeline.from_pretrained(
-    model_id, text_encoder=text_encoder, vae=vae, torch_dtype=dtype
-)
-
-device = "cuda" if torch.cuda.is_available() else "cpu"
-pipe = pipe.to(device)
-print(f"Model loaded on {device}!")
+import subprocess
 
 def upload_to_s3(file_path, bucket, key):
     s3 = boto3.client(
@@ -33,33 +12,48 @@ def upload_to_s3(file_path, bucket, key):
         aws_access_key_id=os.environ.get("S3_ACCESS_KEY"),
         aws_secret_access_key=os.environ.get("S3_SECRET_KEY"),
     )
-    s3.upload_file(file_path, bucket, key, ExtraArgs={"ContentType": "video/mp4", "ACL": "public-read"})
-    return f"{os.environ.get('S3_ENDPOINT_URL')}/{bucket}/{key}"
+    s3.upload_file(file_path, bucket, key, ExtraArgs={"ContentType": "video/mp4"})
+    endpoint = os.environ.get("S3_ENDPOINT_URL", "").rstrip("/")
+    return f"{endpoint}/{bucket}/{key}"
 
 def handler(job):
     input_data = job["input"]
     prompt = input_data.get("prompt", "")
-    negative_prompt = input_data.get("negative_prompt", "")
+    negative_prompt = input_data.get("negative_prompt", "Bright tones, overexposed, static, blurred details, subtitles, style, works, paintings, images, static, overall gray, worst quality, low quality, JPEG compression residual, ugly, incomplete, extra fingers, poorly drawn hands, poorly drawn faces, deformed, disfigured, misshapen limbs, fused fingers, still picture, messy background, three legs, many people in the background, walking backwards")
     num_frames = input_data.get("num_frames", 33)
-    guidance_scale = input_data.get("guidance_scale", 5.0)
-    num_inference_steps = input_data.get("num_inference_steps", 30)
     width = input_data.get("width", 832)
     height = input_data.get("height", 480)
 
     try:
+        from diffusers import AutoencoderKLWan, WanPipeline
+        from diffusers.utils import export_to_video
+        from transformers import UMT5EncoderModel
+
+        dtype = torch.bfloat16
+        model_id = "Wan-AI/Wan2.1-T2V-14B-Diffusers"
+
+        print(f"Loading model from {model_id}...")
+        text_encoder = UMT5EncoderModel.from_pretrained(model_id, subfolder="text_encoder", torch_dtype=dtype)
+        vae = AutoencoderKLWan.from_pretrained(model_id, subfolder="vae", torch_dtype=torch.float32)
+        pipe = WanPipeline.from_pretrained(model_id, text_encoder=text_encoder, vae=vae, torch_dtype=dtype)
+        pipe.to("cuda")
+        print("Model loaded!")
+
         output = pipe(
             prompt=prompt,
             negative_prompt=negative_prompt,
             height=height,
             width=width,
             num_frames=num_frames,
-            guidance_scale=guidance_scale,
-            num_inference_steps=num_inference_steps,
+            guidance_scale=5.0,
+            num_inference_steps=30,
         )
 
         frames = output.frames[0]
         filename = f"{uuid.uuid4()}.mp4"
         local_path = f"/tmp/{filename}"
+
+        from diffusers.utils import export_to_video
         export_to_video(frames, local_path, fps=16)
 
         video_url = upload_to_s3(
@@ -71,6 +65,7 @@ def handler(job):
         return {"status": "success", "video_url": video_url}
 
     except Exception as e:
-        return {"status": "error", "message": str(e)}
+        import traceback
+        return {"status": "error", "message": str(e), "traceback": traceback.format_exc()}
 
 runpod.serverless.start({"handler": handler})

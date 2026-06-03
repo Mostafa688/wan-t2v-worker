@@ -4,6 +4,19 @@ import os
 import uuid
 import boto3
 
+# ============================================
+# تحميل الموديل مرة واحدة عند start الـ worker
+# ============================================
+from diffusers import LTXPipeline
+from diffusers.utils import export_to_video
+
+print("Loading LTX-Video model...")
+pipe = LTXPipeline.from_pretrained("Lightricks/LTX-Video", torch_dtype=torch.bfloat16)
+pipe.to("cuda")
+print("Model loaded and ready!")
+
+# ============================================
+
 def upload_to_s3(file_path, bucket, key):
     s3 = boto3.client(
         "s3",
@@ -25,17 +38,6 @@ def handler(job):
     fps = input_data.get("fps", 24)
 
     try:
-        from diffusers import LTXPipeline
-        from diffusers.utils import export_to_video
-
-        dtype = torch.bfloat16
-        model_id = "Lightricks/LTX-Video"
-
-        print("Loading model from cache...")
-        pipe = LTXPipeline.from_pretrained(model_id, torch_dtype=dtype, local_files_only=True)
-        pipe.to("cuda")
-        print("Model loaded!")
-
         output = pipe(
             prompt=prompt,
             negative_prompt=negative_prompt,

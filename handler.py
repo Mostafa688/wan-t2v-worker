@@ -12,8 +12,8 @@ def upload_to_s3(file_path, bucket, key):
         aws_secret_access_key=os.environ.get("S3_SECRET_KEY"),
     )
     s3.upload_file(file_path, bucket, key, ExtraArgs={"ContentType": "video/mp4"})
-    endpoint = os.environ.get("S3_ENDPOINT_URL", "").rstrip("/")
-    return f"{endpoint}/{bucket}/{key}"
+    public_url = os.environ.get("R2_PUBLIC_URL", "").rstrip("/")
+    return f"{public_url}/{key}"
 
 def handler(job):
     input_data = job["input"]

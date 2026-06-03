@@ -8,7 +8,7 @@ RUN pip install --upgrade pip
 
 RUN pip install torch==2.4.1 torchvision --index-url https://download.pytorch.org/whl/cu121
 
-RUN pip install git+https://github.com/huggingface/diffusers.git@v0.32.2
+RUN pip install git+https://github.com/huggingface/diffusers.git@v0.33.0
 
 RUN pip install "transformers>=4.45.0" "accelerate>=0.33.0"
 

@@ -3,7 +3,6 @@ import torch
 import os
 import uuid
 import boto3
-import subprocess
 
 def upload_to_s3(file_path, bucket, key):
     s3 = boto3.client(
@@ -36,7 +35,13 @@ def handler(job):
         text_encoder = UMT5EncoderModel.from_pretrained(model_id, subfolder="text_encoder", torch_dtype=dtype)
         vae = AutoencoderKLWan.from_pretrained(model_id, subfolder="vae", torch_dtype=torch.float32)
         pipe = WanPipeline.from_pretrained(model_id, text_encoder=text_encoder, vae=vae, torch_dtype=dtype)
-        pipe.to("cuda")
+        
+        # بدل pipe.to("cuda") نستخدم cpu offload
+        pipe.enable_model_cpu_offload()
+        
+        # تحسين إضافي للـ memory
+        os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
+        
         print("Model loaded!")
 
         output = pipe(

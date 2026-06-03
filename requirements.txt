@@ -1,8 +1,11 @@
 runpod
-torch>=2.2.0
-diffusers>=0.33.0
-transformers>=4.51.0
-accelerate
+torch==2.2.0
+torchvision==0.17.0
+diffusers==0.30.0
+transformers==4.44.0
+accelerate==0.33.0
 boto3
 imageio
 imageio-ffmpeg
+sentencepiece
+protobuf

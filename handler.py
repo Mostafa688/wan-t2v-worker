@@ -3,25 +3,7 @@ import torch
 import os
 import uuid
 import boto3
-
-# ============================================
-# تحميل الموديل مرة واحدة عند start الـ worker
-# ============================================
-from diffusers import AutoencoderKLWan, WanPipeline
-from diffusers.utils import export_to_video
-from transformers import UMT5EncoderModel
-
-dtype = torch.bfloat16
-model_id = "Wan-AI/Wan2.1-T2V-14B-Diffusers"
-
-print(f"Loading model {model_id}...")
-text_encoder = UMT5EncoderModel.from_pretrained(model_id, subfolder="text_encoder", torch_dtype=dtype)
-vae = AutoencoderKLWan.from_pretrained(model_id, subfolder="vae", torch_dtype=torch.float32)
-pipe = WanPipeline.from_pretrained(model_id, text_encoder=text_encoder, vae=vae, torch_dtype=dtype)
-pipe.to("cuda")
-print("Model loaded and ready!")
-
-# ============================================
+import subprocess
 
 def upload_to_s3(file_path, bucket, key):
     s3 = boto3.client(
@@ -43,6 +25,20 @@ def handler(job):
     height = input_data.get("height", 480)
 
     try:
+        from diffusers import AutoencoderKLWan, WanPipeline
+        from diffusers.utils import export_to_video
+        from transformers import UMT5EncoderModel
+
+        dtype = torch.bfloat16
+        model_id = "Wan-AI/Wan2.1-T2V-14B-Diffusers"
+
+        print(f"Loading model from {model_id}...")
+        text_encoder = UMT5EncoderModel.from_pretrained(model_id, subfolder="text_encoder", torch_dtype=dtype)
+        vae = AutoencoderKLWan.from_pretrained(model_id, subfolder="vae", torch_dtype=torch.float32)
+        pipe = WanPipeline.from_pretrained(model_id, text_encoder=text_encoder, vae=vae, torch_dtype=dtype)
+        pipe.to("cuda")
+        print("Model loaded!")
+
         output = pipe(
             prompt=prompt,
             negative_prompt=negative_prompt,

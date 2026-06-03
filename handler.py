@@ -19,7 +19,7 @@ def handler(job):
     input_data = job["input"]
     prompt = input_data.get("prompt", "")
     negative_prompt = input_data.get("negative_prompt", "Bright tones, overexposed, static, blurred details, subtitles, style, works, paintings, images, static, overall gray, worst quality, low quality, JPEG compression residual, ugly, incomplete, extra fingers, poorly drawn hands, poorly drawn faces, deformed, disfigured, misshapen limbs, fused fingers, still picture, messy background, three legs, many people in the background, walking backwards")
-    num_frames = input_data.get("num_frames", 33)
+    num_frames = input_data.get("num_frames", 80)
     width = input_data.get("width", 832)
     height = input_data.get("height", 480)
 

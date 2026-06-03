@@ -21,8 +21,10 @@ vae = AutoencoderKLWan.from_pretrained(
 pipe = WanPipeline.from_pretrained(
     model_id, text_encoder=text_encoder, vae=vae, torch_dtype=dtype
 )
-pipe.to("cuda")
-print("Model loaded!")
+
+device = "cuda" if torch.cuda.is_available() else "cpu"
+pipe = pipe.to(device)
+print(f"Model loaded on {device}!")
 
 def upload_to_s3(file_path, bucket, key):
     s3 = boto3.client(
@@ -31,18 +33,18 @@ def upload_to_s3(file_path, bucket, key):
         aws_access_key_id=os.environ.get("S3_ACCESS_KEY"),
         aws_secret_access_key=os.environ.get("S3_SECRET_KEY"),
     )
-    s3.upload_file(file_path, bucket, key, ExtraArgs={"ContentType": "video/mp4"})
+    s3.upload_file(file_path, bucket, key, ExtraArgs={"ContentType": "video/mp4", "ACL": "public-read"})
     return f"{os.environ.get('S3_ENDPOINT_URL')}/{bucket}/{key}"
 
 def handler(job):
-    input = job["input"]
-    prompt = input.get("prompt", "")
-    negative_prompt = input.get("negative_prompt", "")
-    num_frames = input.get("num_frames", 33)
-    guidance_scale = input.get("guidance_scale", 5.0)
-    num_inference_steps = input.get("num_inference_steps", 50)
-    width = input.get("width", 832)
-    height = input.get("height", 480)
+    input_data = job["input"]
+    prompt = input_data.get("prompt", "")
+    negative_prompt = input_data.get("negative_prompt", "")
+    num_frames = input_data.get("num_frames", 33)
+    guidance_scale = input_data.get("guidance_scale", 5.0)
+    num_inference_steps = input_data.get("num_inference_steps", 30)
+    width = input_data.get("width", 832)
+    height = input_data.get("height", 480)
 
     try:
         output = pipe(
@@ -62,7 +64,7 @@ def handler(job):
 
         video_url = upload_to_s3(
             local_path,
-            os.environ.get("S3_BUCKET"),
+            os.environ.get("S3_BUCKET", "erivion-videos"),
             f"wan-videos/{filename}"
         )
 

@@ -12,8 +12,10 @@ RUN pip install "diffusers>=0.33.0" "transformers>=4.45.0,<4.50.0" "accelerate>=
 
 RUN pip install runpod boto3 sentencepiece protobuf huggingface_hub ftfy imageio imageio-ffmpeg
 
-# تحميل الموديل وقت البناء
-RUN python -c "from huggingface_hub import snapshot_download; snapshot_download('Lightricks/LTX-Video')"
+ARG HF_TOKEN
+RUN huggingface-cli login --token $HF_TOKEN && \
+    huggingface-cli download Lightricks/LTX-Video && \
+    huggingface-cli logout
 
 COPY handler.py .
 
